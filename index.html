@@ -59,6 +59,7 @@
         .seletor-container {
             margin-bottom: 20px;
             text-align: left;
+            display: none; /* Começa escondido */
         }
         
         label {
@@ -121,14 +122,12 @@
 
         <textarea id="textoParaFalar" placeholder="Digite seu texto aqui..."></textarea>
         
-        <div class="seletor-container">
+        <div class="seletor-container" id="seletorContainer">
             <label for="seletorVoz">Tipo de Voz:</label>
-            <select id="seletorVoz" disabled>
-                <option>Aguardando vozes...</option>
-            </select>
+            <select id="seletorVoz"></select>
         </div>
         
-        <button id="botaoFalar" disabled>Carregando Vozes...</button>
+        <button id="botaoAcao">Clique para Iniciar o Dublador</button>
 
         <footer>
             TODOS DIREITOS RESERVADOS - SHEMIAH - 2025
@@ -137,36 +136,18 @@
 
     <script>
         const textoParaFalar = document.getElementById('textoParaFalar');
-        const botaoFalar = document.getElementById('botaoFalar');
+        const botaoAcao = document.getElementById('botaoAcao');
         const seletorVoz = document.getElementById('seletorVoz');
+        const seletorContainer = document.getElementById('seletorContainer');
         
         let vozFemininaSelecionada = null;
         let vozMasculinaSelecionada = null;
+        let inicializado = false;
 
-        function configurarLeitor() {
-            // Tenta carregar as vozes repetidamente até encontrar ou desistir.
-            let tentativas = 0;
-            const intervalo = setInterval(() => {
-                const vozesDisponiveis = window.speechSynthesis.getVoices();
-                tentativas++;
-                
-                // Se encontrou vozes em PT-BR, inicializa e para de tentar.
-                if (vozesDisponiveis.some(v => v.lang === 'pt-BR')) {
-                    inicializarVozes(vozesDisponiveis);
-                    clearInterval(intervalo);
-                    return;
-                }
+        function inicializarVozes() {
+            // Este é o momento em que o navegador nos dá a lista de vozes.
+            const vozesDisponiveis = window.speechSynthesis.getVoices();
 
-                // Se tentou por 5 segundos e não achou, desiste.
-                if (tentativas > 20) { // 20 tentativas * 250ms = 5 segundos
-                    clearInterval(intervalo);
-                    botaoFalar.textContent = 'Nenhuma voz em PT-BR encontrada';
-                    seletorVoz.innerHTML = '<option>Vozes não disponíveis</option>';
-                }
-            }, 250);
-        }
-
-        function inicializarVozes(vozesDisponiveis) {
             const encontrarMelhorVoz = (genero) => {
                 const criteriosMasculinos = [['microsoft', 'antonio'], ['microsoft', 'online', 'male'], ['google', 'masculino'], ['male']];
                 const criteriosFemininos = [['microsoft', 'francisca'], ['microsoft', 'online', 'female'], ['google', 'feminino'], ['female']];
@@ -202,16 +183,17 @@
             }
             
             if (vozFemininaSelecionada || vozMasculinaSelecionada) {
-                botaoFalar.textContent = 'Dublar Texto';
-                botaoFalar.disabled = false;
-                seletorVoz.disabled = false;
+                seletorContainer.style.display = 'block'; // Mostra o seletor de voz
+                botaoAcao.textContent = 'Dublar Texto';
+                botaoAcao.disabled = false;
+                inicializado = true; // Marca que a inicialização foi um sucesso
             } else {
-                 botaoFalar.textContent = 'Nenhuma voz de alta qualidade encontrada';
-                 seletorVoz.innerHTML = '<option>Vozes não disponíveis</option>';
+                 botaoAcao.textContent = 'Nenhuma voz de alta qualidade encontrada';
+                 // O botão continua desativado
             }
         }
 
-        botaoFalar.addEventListener('click', () => {
+        function dublarTexto() {
             const texto = textoParaFalar.value;
             const generoSelecionado = seletorVoz.value;
 
@@ -230,9 +212,24 @@
             utterance.pitch = 1;
 
             window.speechSynthesis.speak(utterance);
-        });
+        }
 
-        configurarLeitor();
+        botaoAcao.addEventListener('click', () => {
+            // Se ainda não foi inicializado, o primeiro clique vai ativar tudo.
+            if (!inicializado) {
+                botaoAcao.textContent = 'Carregando Vozes...';
+                botaoAcao.disabled = true;
+
+                // Força uma chamada inicial à API. O clique já deu a permissão.
+                // A lista de vozes pode demorar um instante para popular.
+                // O evento 'onvoiceschanged' é a forma mais segura de saber quando está pronta.
+                speechSynthesis.onvoiceschanged = inicializarVozes;
+                inicializarVozes(); // Tenta uma vez, caso o evento já tenha ocorrido.
+            } else {
+                // Se já foi inicializado, os cliques seguintes apenas dublam o texto.
+                dublarTexto();
+            }
+        });
     </script>
 
 </body>
