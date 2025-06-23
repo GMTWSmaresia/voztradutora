@@ -30,8 +30,8 @@
         <div class="seletor-container">
             <label for="seletorVoz">Tipo de Voz:</label>
             <select id="seletorVoz">
-                <option value="Helia" selected>Feminina (Helia)</option>
-                <option value="Jaques">Masculina (Jaques)</option>
+                <option value="Brazilian Portuguese Female" selected>Feminina</option>
+                <option value="Brazilian Portuguese Male">Masculina</option>
             </select>
         </div>
         
@@ -42,7 +42,7 @@
         </footer>
     </div>
 
-    <script src="https://www.voicerss.org/api/speech.js"></script>
+    <script src="https://code.responsivevoice.org/responsivevoice.js"></script>
     <script>
         const textoParaFalar = document.getElementById('textoParaFalar');
         const botaoAcao = document.getElementById('botaoAcao');
@@ -57,27 +57,14 @@
                 return;
             }
 
+            // Desabilita o botão enquanto a voz é gerada
             botaoAcao.disabled = true;
-            botaoAcao.textContent = 'Gerando Áudio...';
-
-            VoiceRSS.speech({
-                // ===================================================
-                // COLE SUA CHAVE DE API AQUI DENTRO DAS ASPAS
-                key: '643a7995f7584671af6d5cb29a5ebf97',
-                // ===================================================
-                src: texto,
-                hl: 'pt-br',
-                v: nomeVoz, 
-                r: 0, 
-                c: 'MP3',
-                f: '44khz_16bit_stereo',
-                ssml: false,
+            botaoAcao.textContent = 'Dublando...';
+            
+            // Função principal do ResponsiveVoice
+            responsiveVoice.speak(texto, nomeVoz, {
+                // Função que é chamada quando a fala termina
                 onend: function() {
-                    botaoAcao.disabled = false;
-                    botaoAcao.textContent = 'Dublar Texto';
-                },
-                onerror: function(error) {
-                    alert('Ocorreu um erro: ' + error);
                     botaoAcao.disabled = false;
                     botaoAcao.textContent = 'Dublar Texto';
                 }
