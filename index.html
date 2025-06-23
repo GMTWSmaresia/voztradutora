@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Leitor de Texto Pro - Seleção de Voz</title>
+    <title>Dublador de Texto</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
 
@@ -104,22 +104,35 @@
             transform: translateY(-2px);
         }
 
+        footer {
+            margin-top: 30px;
+            font-size: 0.8em;
+            color: #aaa;
+            text-align: center;
+        }
+
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>Leitor de Texto Pro</h1>
+        <h1>DUBLADOR DE TEXTO</h1>
         <p>Escolha o tipo de voz, escreva algo e ouça com a melhor qualidade.</p>
 
         <textarea id="textoParaFalar" placeholder="Digite seu texto aqui..."></textarea>
         
         <div class="seletor-container">
             <label for="seletorVoz">Tipo de Voz:</label>
-            <select id="seletorVoz" disabled></select>
+            <select id="seletorVoz" disabled>
+                <option>Aguardando vozes...</option>
+            </select>
         </div>
         
         <button id="botaoFalar" disabled>Carregando Vozes...</button>
+
+        <footer>
+            TODOS DIREITOS RESERVADOS - SHEMIAH - 2025
+        </footer>
     </div>
 
     <script>
@@ -131,15 +144,29 @@
         let vozMasculinaSelecionada = null;
 
         function configurarLeitor() {
-            window.speechSynthesis.onvoiceschanged = inicializarVozes;
-            inicializarVozes(); // Tenta inicializar caso já esteja pronto
+            // Tenta carregar as vozes repetidamente até encontrar ou desistir.
+            let tentativas = 0;
+            const intervalo = setInterval(() => {
+                const vozesDisponiveis = window.speechSynthesis.getVoices();
+                tentativas++;
+                
+                // Se encontrou vozes em PT-BR, inicializa e para de tentar.
+                if (vozesDisponiveis.some(v => v.lang === 'pt-BR')) {
+                    inicializarVozes(vozesDisponiveis);
+                    clearInterval(intervalo);
+                    return;
+                }
+
+                // Se tentou por 5 segundos e não achou, desiste.
+                if (tentativas > 20) { // 20 tentativas * 250ms = 5 segundos
+                    clearInterval(intervalo);
+                    botaoFalar.textContent = 'Nenhuma voz em PT-BR encontrada';
+                    seletorVoz.innerHTML = '<option>Vozes não disponíveis</option>';
+                }
+            }, 250);
         }
 
-        function inicializarVozes() {
-            const vozesDisponiveis = window.speechSynthesis.getVoices();
-            if (vozesDisponiveis.length === 0) return;
-
-            // Função auxiliar para encontrar a melhor voz baseada em critérios
+        function inicializarVozes(vozesDisponiveis) {
             const encontrarMelhorVoz = (genero) => {
                 const criteriosMasculinos = [['microsoft', 'antonio'], ['microsoft', 'online', 'male'], ['google', 'masculino'], ['male']];
                 const criteriosFemininos = [['microsoft', 'francisca'], ['microsoft', 'online', 'female'], ['google', 'feminino'], ['female']];
@@ -152,19 +179,14 @@
                     );
                     if (vozEncontrada) return vozEncontrada;
                 }
-                // Fallback para qualquer voz do gênero, se as de alta qualidade não forem encontradas
-                const fallbackCriterio = (genero === 'masculino') ? 'male' : 'female';
-                return vozesDisponiveis.find(v => v.lang === 'pt-BR' && v.name.toLowerCase().includes(fallbackCriterio));
+                return null;
             };
 
-            // Encontra e armazena a melhor voz para cada gênero
             vozFemininaSelecionada = encontrarMelhorVoz('feminino');
             vozMasculinaSelecionada = encontrarMelhorVoz('masculino');
 
-            // Limpa o seletor antes de adicionar novas opções
             seletorVoz.innerHTML = '';
             
-            // Adiciona as opções ao menu de seleção
             if (vozFemininaSelecionada) {
                 const option = document.createElement('option');
                 option.value = 'feminina';
@@ -179,14 +201,13 @@
                 seletorVoz.appendChild(option);
             }
             
-            // Ativa os botões se pelo menos uma voz foi encontrada
             if (vozFemininaSelecionada || vozMasculinaSelecionada) {
-                botaoFalar.textContent = 'Ouvir o Texto';
+                botaoFalar.textContent = 'Dublar Texto';
                 botaoFalar.disabled = false;
                 seletorVoz.disabled = false;
             } else {
-                botaoFalar.textContent = 'Nenhuma voz em PT-BR encontrada';
-                seletorVoz.innerHTML = '<option>Nenhuma voz disponível</option>';
+                 botaoFalar.textContent = 'Nenhuma voz de alta qualidade encontrada';
+                 seletorVoz.innerHTML = '<option>Vozes não disponíveis</option>';
             }
         }
 
@@ -194,16 +215,11 @@
             const texto = textoParaFalar.value;
             const generoSelecionado = seletorVoz.value;
 
-            if (!texto.trim() || !generoSelecionado) {
-                return;
-            }
+            if (!texto.trim() || !generoSelecionado) return;
             
             const vozParaUsar = (generoSelecionado === 'feminina') ? vozFemininaSelecionada : vozMasculinaSelecionada;
 
-            if (!vozParaUsar) {
-                alert('A voz selecionada não está disponível. Por favor, recarregue a página.');
-                return;
-            }
+            if (!vozParaUsar) return;
 
             window.speechSynthesis.cancel();
             
@@ -216,7 +232,6 @@
             window.speechSynthesis.speak(utterance);
         });
 
-        // Inicia a configuração
         configurarLeitor();
     </script>
 
