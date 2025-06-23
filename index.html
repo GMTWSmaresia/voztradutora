@@ -47,8 +47,10 @@
         const textoParaFalar = document.getElementById('textoParaFalar');
         const botaoAcao = document.getElementById('botaoAcao');
         const seletorVoz = document.getElementById('seletorVoz');
+        
+        let audioDesbloqueado = false;
 
-        botaoAcao.addEventListener('click', () => {
+        function dublar() {
             const texto = textoParaFalar.value;
             const nomeVoz = seletorVoz.value;
 
@@ -57,18 +59,41 @@
                 return;
             }
 
-            // Desabilita o botão enquanto a voz é gerada
             botaoAcao.disabled = true;
             botaoAcao.textContent = 'Dublando...';
             
-            // Função principal do ResponsiveVoice
+            // Cancela qualquer fala anterior para evitar sobreposição
+            responsiveVoice.cancel(); 
+            
             responsiveVoice.speak(texto, nomeVoz, {
-                // Função que é chamada quando a fala termina
                 onend: function() {
+                    botaoAcao.disabled = false;
+                    botaoAcao.textContent = 'Dublar Texto';
+                },
+                onerror: function(error) {
+                    // Adicionado para nos dar uma pista se algo der errado
+                    console.error("Erro do ResponsiveVoice:", error);
+                    alert("Ocorreu um erro ao gerar a voz. Tente novamente.");
                     botaoAcao.disabled = false;
                     botaoAcao.textContent = 'Dublar Texto';
                 }
             });
+        }
+
+        botaoAcao.addEventListener('click', () => {
+            // No primeiro clique, ele vai destravar o áudio do navegador
+            if (!audioDesbloqueado) {
+                // O ResponsiveVoice tem uma função "muda" para isso.
+                // Isso força o navegador a dar permissão de áudio para o site.
+                responsiveVoice.speak(" ", "Brazilian Portuguese Female", {volume: 0});
+                audioDesbloqueado = true;
+                
+                // Chama a função de dublar logo em seguida
+                dublar();
+            } else {
+                // Nos cliques seguintes, ele apenas chama a função de dublar
+                dublar();
+            }
         });
     </script>
 </body>
