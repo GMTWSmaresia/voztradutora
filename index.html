@@ -145,19 +145,20 @@
         let inicializado = false;
 
         function inicializarVozes() {
-            // Este é o momento em que o navegador nos dá a lista de vozes.
             const vozesDisponiveis = window.speechSynthesis.getVoices();
+            
+            // Se mesmo depois de tudo, a lista ainda estiver vazia, encerramos.
+            if (vozesDisponiveis.length === 0) {
+                botaoAcao.textContent = 'Erro ao carregar vozes.';
+                return;
+            }
 
             const encontrarMelhorVoz = (genero) => {
                 const criteriosMasculinos = [['microsoft', 'antonio'], ['microsoft', 'online', 'male'], ['google', 'masculino'], ['male']];
                 const criteriosFemininos = [['microsoft', 'francisca'], ['microsoft', 'online', 'female'], ['google', 'feminino'], ['female']];
-                
                 const criterios = (genero === 'masculino') ? criteriosMasculinos : criteriosFemininos;
-
                 for (const criterio of criterios) {
-                    const vozEncontrada = vozesDisponiveis.find(v => 
-                        v.lang === 'pt-BR' && criterio.every(c => v.name.toLowerCase().includes(c))
-                    );
+                    const vozEncontrada = vozesDisponiveis.find(v => v.lang === 'pt-BR' && criterio.every(c => v.name.toLowerCase().includes(c)));
                     if (vozEncontrada) return vozEncontrada;
                 }
                 return null;
@@ -183,50 +184,48 @@
             }
             
             if (vozFemininaSelecionada || vozMasculinaSelecionada) {
-                seletorContainer.style.display = 'block'; // Mostra o seletor de voz
+                seletorContainer.style.display = 'block';
                 botaoAcao.textContent = 'Dublar Texto';
                 botaoAcao.disabled = false;
-                inicializado = true; // Marca que a inicialização foi um sucesso
+                inicializado = true;
             } else {
-                 botaoAcao.textContent = 'Nenhuma voz de alta qualidade encontrada';
-                 // O botão continua desativado
+                 botaoAcao.textContent = 'Nenhuma voz PT-BR de qualidade encontrada';
             }
         }
 
         function dublarTexto() {
             const texto = textoParaFalar.value;
             const generoSelecionado = seletorVoz.value;
-
             if (!texto.trim() || !generoSelecionado) return;
-            
             const vozParaUsar = (generoSelecionado === 'feminina') ? vozFemininaSelecionada : vozMasculinaSelecionada;
-
             if (!vozParaUsar) return;
-
             window.speechSynthesis.cancel();
-            
             const utterance = new SpeechSynthesisUtterance(texto);
             utterance.voice = vozParaUsar;
             utterance.lang = 'pt-BR';
             utterance.rate = 1; 
             utterance.pitch = 1;
-
             window.speechSynthesis.speak(utterance);
         }
 
         botaoAcao.addEventListener('click', () => {
-            // Se ainda não foi inicializado, o primeiro clique vai ativar tudo.
             if (!inicializado) {
                 botaoAcao.textContent = 'Carregando Vozes...';
                 botaoAcao.disabled = true;
 
-                // Força uma chamada inicial à API. O clique já deu a permissão.
-                // A lista de vozes pode demorar um instante para popular.
-                // O evento 'onvoiceschanged' é a forma mais segura de saber quando está pronta.
+                // **O TRUQUE DA IGNIÇÃO FORÇADA**
+                // Pede para falar um texto vazio para forçar o motor a carregar.
+                const utterance = new SpeechSynthesisUtterance('');
+                window.speechSynthesis.speak(utterance);
+
+                // O evento 'onvoiceschanged' agora deve disparar de forma confiável
+                // depois que o motor foi "acordado".
                 speechSynthesis.onvoiceschanged = inicializarVozes;
-                inicializarVozes(); // Tenta uma vez, caso o evento já tenha ocorrido.
+                
+                // Tenta inicializar após um pequeno atraso, como garantia.
+                setTimeout(inicializarVozes, 250);
+
             } else {
-                // Se já foi inicializado, os cliques seguintes apenas dublam o texto.
                 dublarTexto();
             }
         });
